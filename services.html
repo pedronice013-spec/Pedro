@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Services | Crypto Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="shared/styles.css">
+</head>
+<body>
+    <main class="p-4 md:p-6 min-h-screen">
+        <header class="mb-6">
+            <h1 class="text-2xl font-bold">Trading Services</h1>
+            <p class="text-sm text-gray-400">Tools and utilities for active traders</p>
+        </header>
+
+        <!-- Tools Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            <!-- Position Calculator -->
+            <div class="glass-panel p-6">
+                <div class="text-3xl mb-3">🧮</div>
+                <h2 class="font-bold text-lg mb-2">Position Calculator</h2>
+                <p class="text-sm text-gray-400 mb-4">Calculate position size, leverage, and risk/reward ratio.</p>
+                
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs text-gray-500">Account Balance</label>
+                        <input type="number" id="calcBalance" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm mt-1" placeholder="10000">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Risk %</label>
+                        <input type="number" id="calcRisk" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm mt-1" placeholder="2">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Stop Loss %</label>
+                        <input type="number" id="calcStop" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm mt-1" placeholder="5">
+                    </div>
+                    <button onclick="Services.calculatePosition()" class="w-full btn-primary mt-2">Calculate</button>
+                </div>
+                
+                <div id="calcResult" class="mt-4 p-3 rounded bg-gray-800/50 hidden">
+                    <div class="text-xs text-gray-500">Position Size</div>
+                    <div class="text-xl font-bold text-blue-400" id="positionSize">--</div>
+                </div>
+            </div>
+
+            <!-- Economic Calendar -->
+            <div class="glass-panel p-6">
+                <div class="text-3xl mb-3">📅</div>
+                <h2 class="font-bold text-lg mb-2">Economic Calendar</h2>
+                <p class="text-sm text-gray-400 mb-4">Upcoming macro events with market impact predictions.</p>
+                
+                <div class="space-y-2" id="econCalendar">
+                    <div class="flex justify-between items-center p-3 rounded bg-red-500/10 border border-red-500/20">
+                        <div>
+                            <div class="font-semibold text-sm">CPI Release</div>
+                            <div class="text-xs text-gray-500">Tomorrow 08:30 UTC</div>
+                        </div>
+                        <span class="badge badge-danger">High</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 rounded bg-yellow-500/10 border border-yellow-500/20">
+                        <div>
+                            <div class="font-semibold text-sm">FOMC Minutes</div>
+                            <div class="text-xs text-gray-500">Apr 5, 14:00 UTC</div>
+                        </div>
+                        <span class="badge badge-warning">Medium</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Correlation Matrix -->
+            <div class="glass-panel p-6">
+                <div class="text-3xl mb-3">📊</div>
+                <h2 class="font-bold text-lg mb-2">Correlation Matrix</h2>
+                <p class="text-sm text-gray-400 mb-4">Asset correlations over different timeframes.</p>
+                
+                <div class="grid grid-cols-4 gap-1 text-xs text-center">
+                    <div class="p-2 text-gray-500">Asset</div>
+                    <div class="p-2 text-gray-500">BTC</div>
+                    <div class="p-2 text-gray-500">ETH</div>
+                    <div class="p-2 text-gray-500">SPX</div>
+                    
+                    <div class="p-2 text-gray-400">BTC</div>
+                    <div class="p-2 bg-gray-800 rounded">1.00</div>
+                    <div class="p-2 bg-blue-900/30 rounded text-blue-400">0.85</div>
+                    <div class="p-2 bg-green-900/30 rounded text-green-400">0.42</div>
+                    
+                    <div class="p-2 text-gray-400">ETH</div>
+                    <div class="p-2 bg-blue-900/30 rounded text-blue-400">0.85</div>
+                    <div class="p-2 bg-gray-800 rounded">1.00</div>
+                    <div class="p-2 bg-yellow-900/30 rounded text-yellow-400">0.38</div>
+                    
+                    <div class="p-2 text-gray-400">SOL</div>
+                    <div class="p-2 bg-purple-900/30 rounded text-purple-400">0.72</div>
+                    <div class="p-2 bg-purple-900/30 rounded text-purple-400">0.78</div>
+                    <div class="p-2 bg-red-900/30 rounded text-red-400">0.25</div>
+                </div>
+            </div>
+
+            <!-- Alert Manager -->
+            <div class="glass-panel p-6">
+                <div class="text-3xl mb-3">🔔</div>
+                <h2 class="font-bold text-lg mb-2">Price Alerts</h2>
+                <p class="text-sm text-gray-400 mb-4">Set custom price and indicator alerts.</p>
+                
+                <div class="space-y-2 mb-4" id="alertList">
+                    <div class="flex justify-between items-center p-2 rounded bg-gray-800/50">
+                        <div class="text-sm">BTC > $70,000</div>
+                        <button class="text-red-400 text-xs">✕</button>
+                    </div>
+                    <div class="flex justify-between items-center p-2 rounded bg-gray-800/50">
+                        <div class="text-sm">ETH Funding > 0.1%</div>
+                        <button class="text-red-400 text-xs">✕</button>
+                    </div>
+                </div>
+                
+                <button onclick="Services.addAlert()" class="w-full btn-secondary">+ New Alert</button>
+            </div>
+
+            <!-- Portfolio Tracker -->
+            <div class="glass-panel p-6">
+                <div class="text-3xl mb-3">💼</div>
+                <h2 class="font-bold text-lg mb-2">Portfolio</h2>
+                <p class="text-sm text-gray-400 mb-4">Track your holdings across exchanges.</p>
+                
+                <div class="text-center py-8 text-gray-500">
+                    <div class="text-4xl mb-2">🔒</div>
+                    <p class="text-sm">Connect exchange API to view</p>
+                    <button class="btn-primary mt-3 text-sm">Connect</button>
+                </div>
+            </div>
+
+            <!-- Backtesting -->
+            <div class="glass-panel p-6">
+                <div class="text-3xl mb-3">📈</div>
+                <h2 class="font-bold text-lg mb-2">Strategy Backtest</h2>
+                <p class="text-sm text-gray-400 mb-4">Test strategies on historical data.</p>
+                
+                <div class="space-y-3">
+                    <select class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+                        <option>Moving Average Cross</option>
+                        <option>RSI Overbought/Oversold</option>
+                        <option>MACD Divergence</option>
+                        <option>Custom Strategy</option>
+                    </select>
+                    <button class="w-full btn-primary">Run Backtest</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="shared/navigation.js"></script>
+    <script>
+        const Services = {
+            calculatePosition: () => {
+                const balance = parseFloat(document.getElementById('calcBalance').value) || 0;
+                const risk = parseFloat(document.getElementById('calcRisk').value) || 0;
+                const stop = parseFloat(document.getElementById('calcStop').value) || 0;
+                
+                if (balance && risk && stop) {
+                    const riskAmount = balance * (risk / 100);
+                    const positionSize = riskAmount / (stop / 100);
+                    
+                    document.getElementById('positionSize').textContent = '$' + positionSize.toFixed(2);
+                    document.getElementById('calcResult').classList.remove('hidden');
+                }
+            },
+
+            addAlert: () => {
+                const condition = prompt('Enter alert condition (e.g. BTC > 70000):');
+                if (condition) {
+                    const list = document.getElementById('alertList');
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center p-2 rounded bg-gray-800/50';
+                    div.innerHTML = `
+                        <div class="text-sm">${condition}</div>
+                        <button class="text-red-400 text-xs" onclick="this.parentElement.remove()">✕</button>
+                    `;
+                    list.appendChild(div);
+                }
+            }
+        };
+    </script>
+</body>
+</html>

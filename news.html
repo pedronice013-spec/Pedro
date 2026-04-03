@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live News | Crypto Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="shared/styles.css">
+    <style>
+        .sentiment-pos { border-left: 3px solid #10b981 !important; }
+.sentiment-neg { border-left: 3px solid #ef4444 !important; }
+.sentiment-neu { border-left: 3px solid #3b82f6 !important; }
+
+        .news-card { transition: all 0.3s; height: 100%; display: flex; flex-direction: column; }
+        .news-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+        .sentiment-pos { border-left: 4px solid #10b981; }
+        .sentiment-neg { border-left: 4px solid #ef4444; }
+        .sentiment-neu { border-left: 4px solid #3b82f6; }
+        .glass-panel { background: rgba(23, 23, 23, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; }
+    </style>
+</head>
+<body class="bg-[#0a0a0a] text-gray-100">
+    <main class="p-6 max-w-7xl mx-auto">
+        <header class="flex justify-between items-end mb-8">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight">Terminal News</h1>
+                <p class="text-gray-500 text-sm mt-1">Real-time aggregate: Cointelegraph, Decrypt, & 50+ sources</p>
+            </div>
+            <div id="liveStatus" class="flex items-center gap-2 text-xs font-mono text-green-500 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                LIVE FEED
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="newsGrid">
+            <div class="animate-pulse glass-panel h-48 p-4"></div>
+            <div class="animate-pulse glass-panel h-48 p-4"></div>
+            <div class="animate-pulse glass-panel h-48 p-4"></div>
+        </div>
+    </main>
+
+    <script src="js/news-service.js"></script>
+</body>
+</html>
