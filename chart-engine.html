@@ -3,47 +3,271 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Analytics | Crypto Command Center</title>
+    <title>Advanced Charts | Crypto Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="shared/styles.css">
     <style>
-        .indicator-label { font-size: 10px; font-weight: 800; color: #6b7280; letter-spacing: 0.1em; }
-        .chart-container { background: rgba(10, 10, 10, 0.8); border: 1px solid rgba(255,255,255,0.05); }
+        .sidebar-link {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sidebar-link:hover {
+            background: rgba(16, 185, 129, 0.1);
+            transform: translateX(4px);
+        }
+        .sidebar-link.active {
+            background: rgba(16, 185, 129, 0.18);
+            color: #34d399;
+            border-left: 4px solid #34d399;
+            box-shadow: 0 0 15px rgba(52, 211, 153, 0.2);
+        }
+        .main-content {
+            margin-left: 256px;
+        }
+        @media (max-width: 1024px) {
+            .main-content { margin-left: 0; }
+        }
+        .ws-status {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 9999px;
+        }
+        .symbol-btn {
+            transition: all 0.2s;
+        }
+        .symbol-btn.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border-color: #34d399;
+        }
     </style>
 </head>
-<body class="bg-[#050505] text-white p-4 md:p-6">
-    <header class="mb-6 flex justify-between items-center">
-        <div>
-            <h1 class="text-xl font-bold tracking-tighter">BTC/USDT <span class="text-blue-500 text-sm ml-2">ADVANCED VIEW</span></h1>
-            <div id="liveTicker" class="text-2xl font-mono font-black text-green-400">$00,000.00</div>
-        </div>
-        <div class="flex gap-2 bg-white/5 p-1 rounded-lg">
-            <button onclick="ChartEngine.switchTF('15m')" class="px-3 py-1 rounded text-[10px] hover:bg-white/10">15M</button>
-            <button onclick="ChartEngine.switchTF('1h')" class="px-3 py-1 rounded text-[10px] bg-blue-600/20 text-blue-400 border border-blue-500/20">1H</button>
-            <button onclick="ChartEngine.switchTF('4h')" class="px-3 py-1 rounded text-[10px] hover:bg-white/10">4H</button>
-        </div>
-    </header>
+<body class="bg-[#020408] text-gray-100 font-sans">
 
-    <div class="grid grid-cols-1 gap-4">
-        <div class="chart-container rounded-xl p-4">
-            <div class="indicator-label mb-2 uppercase">Candlestick + EMA</div>
-            <div id="priceChart" style="height: 400px;"></div>
+
+        <div class="p-6 border-t border-white/10 mt-auto">
+            <div class="flex items-center justify-between text-xs font-mono mb-4">
+                <div class="flex items-center gap-2 text-emerald-400">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span id="wsDot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span id="wsDotStatic" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span id="wsStatus" class="ws-status bg-emerald-900 text-emerald-300">CONNECTED</span>
+                </div>
+                <div id="sidebarTime" class="text-gray-500"></div>
+            </div>
+
+            <!-- Theme Toggle -->
+            <div onclick="app.toggleTheme()" 
+                 class="flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 transition-colors rounded-2xl py-3 cursor-pointer">
+                <span id="themeIcon" class="text-xl">🌙</span>
+                <span id="themeText" class="text-sm font-medium">Dark Mode</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content p-4 md:p-8 min-h-screen">
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-black tracking-tighter">ADVANCED <span class="text-emerald-500">CHARTS</span></h1>
+                <p class="text-sm text-gray-500 font-mono">MULTI-SYMBOL COMPARISON • LIVE DATA</p>
+            </div>
+            <div id="lastUpdated" class="text-xs font-mono text-gray-500 px-4 py-1 bg-white/5 rounded-3xl"></div>
         </div>
 
-        <div class="chart-container rounded-xl p-4">
-            <div class="indicator-label mb-2 uppercase">Relative Strength Index (RSI 14)</div>
-            <div style="height: 120px;"><canvas id="rsiChart"></canvas></div>
+        <!-- Symbol Selector -->
+        <div class="glass-panel p-6 rounded-3xl mb-6">
+            <div class="flex flex-wrap gap-2" id="symbolSelector">
+                <!-- Populated by JS -->
+            </div>
         </div>
 
-        <div class="chart-container rounded-xl p-4">
-            <div class="indicator-label mb-2 uppercase">MACD (12, 26, 9)</div>
-            <div style="height: 120px;"><canvas id="macdChart"></canvas></div>
+        <!-- Main Chart -->
+        <div class="glass-panel p-6 rounded-3xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="chartTitle" class="font-semibold text-xl">BTCUSDT • 1h</h2>
+                <div class="flex gap-2" id="timeframeSelector">
+                    <!-- Timeframe buttons added by JS -->
+                </div>
+            </div>
+            <div id="mainChart" style="height: 520px;" class="w-full"></div>
         </div>
-    </div>
 
-    <script src="data-service.js"></script>
-    <script src="chart-logic.js"></script>
+        <!-- Status -->
+        <div class="mt-6 text-center text-xs text-gray-500 font-mono" id="chartStatus">
+            Loading chart data...
+        </div>
+    </main>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script>
+        const app = {
+            chart: null,
+            candleSeries: null,
+            currentSymbol: 'BTCUSDT',
+            currentTF: '1h',
+            symbols: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT', 'TONUSDT', 'ADAUSDT'],
+            timeframes: ['15m', '1h', '4h', '1d'],
+            klineWs: null,
+            isDark: true,
+
+            safeLocalStorage: {
+                getItem: (key) => { try { return localStorage.getItem(key); } catch(e) { return null; }},
+                setItem: (key, value) => { try { localStorage.setItem(key, value); return true; } catch(e) { return false; }}
+            },
+
+            init: () => {
+                app.loadTheme();
+                app.initChart();
+                app.renderSymbolSelector();
+                app.renderTimeframeSelector();
+                app.loadChart(app.currentSymbol, app.currentTF);
+                app.updateSidebarTime();
+                setInterval(app.updateSidebarTime, 30000);
+            },
+
+            initChart: () => {
+                const el = document.getElementById('mainChart');
+                app.chart = LightweightCharts.createChart(el, {
+                    layout: { background: { color: 'transparent' }, textColor: '#71717a' },
+                    grid: { 
+                        vertLines: { color: 'rgba(255,255,255,0.04)' }, 
+                        horzLines: { color: 'rgba(255,255,255,0.04)' } 
+                    },
+                    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                    rightPriceScale: { borderColor: 'rgba(255,255,255,0.1)' },
+                    timeScale: { borderColor: 'rgba(255,255,255,0.1)', timeVisible: true }
+                });
+                app.candleSeries = app.chart.addCandlestickSeries({
+                    upColor: '#34d399',
+                    downColor: '#f87171',
+                    borderUpColor: '#34d399',
+                    borderDownColor: '#f87171',
+                    wickUpColor: '#34d399',
+                    wickDownColor: '#f87171'
+                });
+            },
+
+            renderSymbolSelector: () => {
+                const container = document.getElementById('symbolSelector');
+                container.innerHTML = app.symbols.map(sym => {
+                    const clean = sym.replace('USDT', '');
+                    return `
+                        <button onclick="app.switchSymbol('${sym}')" 
+                                data-symbol="${sym}"
+                                class="symbol-btn px-5 py-2 text-sm font-mono border border-white/10 rounded-2xl hover:border-emerald-500 transition-all ${sym === app.currentSymbol ? 'active' : ''}">
+                            ${clean}
+                        </button>
+                    `;
+                }).join('');
+            },
+
+            renderTimeframeSelector: () => {
+                const container = document.getElementById('timeframeSelector');
+                container.innerHTML = app.timeframes.map(tf => `
+                    <button onclick="app.switchTimeframe('${tf}')" 
+                            class="px-4 py-1.5 text-xs font-mono rounded-xl transition-all ${tf === app.currentTF ? 'tab-active' : 'hover:bg-white/10'}">
+                        ${tf}
+                    </button>
+                `).join('');
+            },
+
+            switchSymbol: (symbol) => {
+                app.currentSymbol = symbol;
+                document.querySelectorAll('#symbolSelector button').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.symbol === symbol);
+                });
+                document.getElementById('chartTitle').textContent = `${symbol} • ${app.currentTF}`;
+                app.loadChart(symbol, app.currentTF);
+            },
+
+            switchTimeframe: (tf) => {
+                app.currentTF = tf;
+                document.querySelectorAll('#timeframeSelector button').forEach(btn => {
+                    btn.classList.toggle('tab-active', btn.textContent === tf);
+                });
+                document.getElementById('chartTitle').textContent = `${app.currentSymbol} • ${tf}`;
+                app.loadChart(app.currentSymbol, tf);
+            },
+
+            loadChart: async (symbol, interval) => {
+                document.getElementById('chartStatus').textContent = `Loading ${symbol} ${interval} chart...`;
+
+                try {
+                    // Close previous WebSocket if exists
+                    if (app.klineWs) app.klineWs.close();
+
+                    const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=300`);
+                    const data = await res.json();
+
+                    const candles = data.map(d => ({
+                        time: Math.floor(d[0] / 1000),
+                        open: parseFloat(d[1]),
+                        high: parseFloat(d[2]),
+                        low: parseFloat(d[3]),
+                        close: parseFloat(d[4])
+                    }));
+
+                    app.candleSeries.setData(candles);
+                    app.chart.timeScale().fitContent();
+
+                    // Start real-time kline WebSocket
+                    app.startKlineWebSocket(symbol, interval);
+
+                    document.getElementById('chartStatus').textContent = `Live • ${symbol} ${interval}`;
+                } catch (e) {
+                    console.error(e);
+                    document.getElementById('chartStatus').textContent = "Failed to load chart data";
+                }
+            },
+
+            startKlineWebSocket: (symbol, interval) => {
+                const stream = `${symbol.toLowerCase()}@kline_${interval}`;
+                app.klineWs = new WebSocket(`wss://stream.binance.com:9443/ws/${stream}`);
+
+                app.klineWs.onmessage = (event) => {
+                    const msg = JSON.parse(event.data);
+                    const k = msg.k;
+                    const candle = {
+                        time: Math.floor(k.t / 1000),
+                        open: parseFloat(k.o),
+                        high: parseFloat(k.h),
+                        low: parseFloat(k.l),
+                        close: parseFloat(k.c)
+                    };
+                    app.candleSeries.update(candle);
+                };
+
+                app.klineWs.onerror = () => console.warn("Kline WS error");
+                app.klineWs.onclose = () => console.log("Kline WS closed");
+            },
+
+            updateSidebarTime: () => {
+                document.getElementById('sidebarTime').textContent = new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+            },
+
+            toggleTheme: () => {
+                app.isDark = !app.isDark;
+                document.body.classList.toggle('light', !app.isDark);
+                document.getElementById('themeIcon').textContent = app.isDark ? '🌙' : '☀️';
+                document.getElementById('themeText').textContent = app.isDark ? 'Dark Mode' : 'Light Mode';
+                app.safeLocalStorage.setItem('theme', app.isDark ? 'dark' : 'light');
+            },
+
+            loadTheme: () => {
+                const saved = app.safeLocalStorage.getItem('theme');
+                if (saved === 'light') {
+                    app.isDark = false;
+                    document.body.classList.add('light');
+                    document.getElementById('themeIcon').textContent = '☀️';
+                    document.getElementById('themeText').textContent = 'Light Mode';
+                }
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', app.init);
+    </script>
 </body>
 </html>
