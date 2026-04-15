@@ -6,268 +6,743 @@
     <title>Advanced Charts | Crypto Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
-    <link rel="stylesheet" href="shared/styles.css">
     <style>
-        .sidebar-link {
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        :root {
+            --bg: #020408;
+            --glass: rgba(255,255,255,0.04);
+            --glass-border: rgba(255,255,255,0.08);
+            --emerald: #34d399;
+            --emerald-dim: rgba(52,211,153,0.15);
+            --sidebar-w: 240px;
         }
-        .sidebar-link:hover {
-            background: rgba(16, 185, 129, 0.1);
-            transform: translateX(4px);
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: #e4e4e7; font-family: 'Courier New', monospace; min-height: 100vh; overflow-x: hidden; }
+
+        /* ── Sidebar ── */
+        #sidebar {
+            position: fixed; left: 0; top: 0; height: 100vh;
+            width: var(--sidebar-w);
+            background: rgba(2,4,8,0.95);
+            border-right: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            display: flex; flex-direction: column;
+            z-index: 100;
+            transform: translateX(calc(-1 * var(--sidebar-w) + 4px));
+            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
         }
-        .sidebar-link.active {
-            background: rgba(16, 185, 129, 0.18);
-            color: #34d399;
-            border-left: 4px solid #34d399;
-            box-shadow: 0 0 15px rgba(52, 211, 153, 0.2);
+        #sidebar:hover,
+        #sidebar.open {
+            transform: translateX(0);
+            box-shadow: 4px 0 40px rgba(0,0,0,0.6);
         }
-        .main-content {
-            margin-left: 256px;
+
+        /* Slim grab-handle on the left edge */
+        #sidebar::before {
+            content: '';
+            position: absolute;
+            right: -1px; top: 50%; transform: translateY(-50%);
+            width: 4px; height: 60px;
+            background: linear-gradient(to bottom, transparent, var(--emerald), transparent);
+            border-radius: 4px;
+            opacity: 0.6;
+            transition: opacity 0.2s;
         }
-        @media (max-width: 1024px) {
-            .main-content { margin-left: 0; }
+        #sidebar:hover::before { opacity: 0; }
+
+        .sidebar-logo {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex; align-items: center; gap: 12px;
         }
-        .ws-status {
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 9999px;
+        .logo-icon {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, #34d399, #0d9488);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0;
         }
-        .symbol-btn {
+        .logo-text h1 { font-size: 16px; font-weight: 900; letter-spacing: -1px; color: #f4f4f5; }
+        .logo-text p { font-size: 9px; color: var(--emerald); letter-spacing: 3px; margin-top: -2px; }
+
+        .nav-links { flex: 1; padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+
+        .nav-link {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 14px; border-radius: 10px;
+            font-size: 11px; font-weight: 700; letter-spacing: 1px;
+            color: #71717a;
+            text-decoration: none;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .nav-link:hover { background: var(--emerald-dim); color: var(--emerald); }
+        .nav-link.active {
+            background: var(--emerald-dim);
+            color: var(--emerald);
+            border-left: 3px solid var(--emerald);
+        }
+        .nav-link .icon { font-size: 16px; flex-shrink: 0; }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--glass-border);
+        }
+        .status-row {
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 10px; margin-bottom: 10px;
+        }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--emerald);
+            box-shadow: 0 0 6px var(--emerald);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        .theme-btn {
+            width: 100%; padding: 8px;
+            background: var(--glass); border: 1px solid var(--glass-border);
+            border-radius: 8px; color: #a1a1aa;
+            font-size: 11px; cursor: pointer;
+            transition: all 0.2s; font-family: inherit;
+        }
+        .theme-btn:hover { background: rgba(255,255,255,0.08); color: #f4f4f5; }
+
+        /* ── Main layout ── */
+        #main {
+            margin-left: 4px; /* just the grab-handle width */
+            padding: 24px 28px;
+            min-height: 100vh;
+            transition: margin-left 0.35s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        /* ── Top bar ── */
+        .topbar {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
+        }
+        .topbar-left { display: flex; align-items: center; gap: 14px; }
+        .menu-btn {
+            width: 36px; height: 36px;
+            background: var(--glass); border: 1px solid var(--glass-border);
+            border-radius: 8px; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
             transition: all 0.2s;
         }
-        .symbol-btn.active {
-            background: rgba(16, 185, 129, 0.2);
-            color: #34d399;
-            border-color: #34d399;
+        .menu-btn:hover { background: var(--emerald-dim); border-color: var(--emerald); }
+        .menu-btn span { display: block; width: 16px; height: 1.5px; background: #a1a1aa; border-radius: 2px; transition: all 0.2s; }
+        .menu-btn:hover span { background: var(--emerald); }
+
+        .page-title { font-size: 22px; font-weight: 900; letter-spacing: -1px; }
+        .page-title em { color: var(--emerald); font-style: normal; }
+        .page-sub { font-size: 10px; color: #52525b; letter-spacing: 2px; margin-top: 2px; }
+
+        .live-badge {
+            font-size: 10px; color: #52525b;
+            background: var(--glass); border: 1px solid var(--glass-border);
+            padding: 4px 12px; border-radius: 20px;
+        }
+
+        /* ── Glass panel ── */
+        .panel {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+        }
+
+        /* ── Controls bar ── */
+        .controls-bar {
+            padding: 16px 20px;
+            display: flex; align-items: center; gap: 12px;
+            flex-wrap: wrap; margin-bottom: 16px;
+        }
+        .ctrl-group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .ctrl-divider { width: 1px; height: 24px; background: var(--glass-border); margin: 0 4px; }
+        .ctrl-group.right { margin-left: auto; }
+
+        .sym-btn, .tf-btn {
+            padding: 6px 14px; font-size: 11px; font-weight: 700;
+            font-family: inherit; letter-spacing: 0.5px;
+            background: var(--glass); border: 1px solid var(--glass-border);
+            border-radius: 8px; color: #71717a; cursor: pointer;
+            transition: all 0.18s;
+        }
+        .sym-btn:hover, .tf-btn:hover { border-color: rgba(52,211,153,0.4); color: #d4d4d8; }
+        .sym-btn.active, .tf-btn.active {
+            background: var(--emerald-dim);
+            border-color: var(--emerald);
+            color: var(--emerald);
+        }
+        .tf-btn { padding: 5px 10px; font-size: 10px; }
+
+        /* ── Chart container ── */
+        .chart-wrap { padding: 20px; margin-bottom: 16px; }
+        .chart-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+        }
+        .chart-title { font-size: 14px; font-weight: 700; letter-spacing: 0.5px; }
+        .chart-price { font-size: 22px; font-weight: 900; letter-spacing: -1px; }
+        .chart-price span { font-size: 12px; font-weight: 400; margin-left: 6px; }
+
+        .ind-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .ind-btn {
+            padding: 4px 12px; font-size: 10px; font-weight: 700;
+            font-family: inherit; letter-spacing: 0.5px;
+            background: var(--glass); border: 1px solid var(--glass-border);
+            border-radius: 6px; color: #52525b; cursor: pointer;
+            transition: all 0.18s;
+        }
+        .ind-btn:hover { color: #a1a1aa; }
+        .ind-btn.active {
+            background: var(--emerald-dim);
+            border-color: rgba(52,211,153,0.5);
+            color: var(--emerald);
+        }
+
+        /* ── Sub-charts grid ── */
+        .sub-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 900px) { .sub-charts { grid-template-columns: 1fr; } }
+
+        .sub-chart-wrap { padding: 16px 20px; }
+        .sub-chart-title { font-size: 10px; color: #52525b; letter-spacing: 2px; margin-bottom: 12px; font-weight: 700; }
+
+        /* RSI zones */
+        .rsi-meta { display: flex; gap: 16px; font-size: 10px; color: #52525b; margin-bottom: 8px; }
+        .rsi-meta span { display: flex; align-items: center; gap: 4px; }
+        .rsi-meta .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+        /* Loading shimmer */
+        .loading {
+            display: flex; align-items: center; justify-content: center;
+            height: 100%; color: #3f3f46; font-size: 11px; letter-spacing: 2px;
+        }
+
+        /* Toast */
+        #toastArea {
+            position: fixed; bottom: 24px; right: 24px;
+            display: flex; flex-direction: column; gap: 8px;
+            z-index: 999;
+        }
+        .toast {
+            padding: 10px 18px; background: rgba(10,15,20,0.95);
+            border: 1px solid var(--glass-border); border-radius: 8px;
+            font-size: 11px; letter-spacing: 1px;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } }
+
+        @media (max-width: 768px) {
+            #main { padding: 16px; }
+            .sub-charts { grid-template-columns: 1fr; }
         }
     </style>
 </head>
-<body class="bg-[#020408] text-gray-100 font-sans">
+<body>
 
-
-        <div class="p-6 border-t border-white/10 mt-auto">
-            <div class="flex items-center justify-between text-xs font-mono mb-4">
-                <div class="flex items-center gap-2 text-emerald-400">
-                    <span class="relative flex h-2.5 w-2.5">
-                        <span id="wsDot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span id="wsDotStatic" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                    </span>
-                    <span id="wsStatus" class="ws-status bg-emerald-900 text-emerald-300">CONNECTED</span>
-                </div>
-                <div id="sidebarTime" class="text-gray-500"></div>
-            </div>
-
-            <!-- Theme Toggle -->
-            <div onclick="app.toggleTheme()" 
-                 class="flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 transition-colors rounded-2xl py-3 cursor-pointer">
-                <span id="themeIcon" class="text-xl">🌙</span>
-                <span id="themeText" class="text-sm font-medium">Dark Mode</span>
-            </div>
+<!-- ═══ SIDEBAR ═══ -->
+<nav id="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon">⚡</div>
+        <div class="logo-text">
+            <h1>COMMAND</h1>
+            <p>TERMINAL</p>
         </div>
-    </nav>
+    </div>
 
-    <!-- Main Content -->
-    <main class="main-content p-4 md:p-8 min-h-screen">
-        <div class="flex justify-between items-center mb-8">
+    <div class="nav-links">
+        <a href="index.html" class="nav-link">
+            <span class="icon">📊</span><span>DASHBOARD</span>
+        </a>
+        <a href="heatmap.html" class="nav-link">
+            <span class="icon">🔥</span><span>MARKET HEATMAP</span>
+        </a>
+        <a href="headman.html" class="nav-link">
+            <span class="icon">🤖</span><span>AI PREDICTIONS</span>
+        </a>
+        <a href="chart-engine.html" class="nav-link active">
+            <span class="icon">📈</span><span>ADVANCED CHARTS</span>
+        </a>
+        <a href="news.html" class="nav-link">
+            <span class="icon">📰</span><span>TERMINAL NEWS</span>
+        </a>
+        <a href="services.html" class="nav-link">
+            <span class="icon">🧮</span><span>CALCULATORS</span>
+        </a>
+    </div>
+
+    <div class="sidebar-footer">
+        <div class="status-row">
+            <div style="display:flex;align-items:center;gap:8px;color:var(--emerald);font-size:10px;">
+                <div class="status-dot"></div>
+                <span id="wsStatus">CONNECTED</span>
+            </div>
+            <span id="sidebarTime" style="color:#3f3f46;font-size:10px;"></span>
+        </div>
+        <button class="theme-btn" onclick="app.toggleTheme()">
+            <span id="themeIcon">🌙</span> <span id="themeText">Dark Mode</span>
+        </button>
+    </div>
+</nav>
+
+<!-- ═══ MAIN CONTENT ═══ -->
+<main id="main">
+
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="menu-btn" onclick="app.toggleSidebar()" title="Toggle sidebar">
+                <span></span><span></span><span></span>
+            </div>
             <div>
-                <h1 class="text-3xl font-black tracking-tighter">ADVANCED <span class="text-emerald-500">CHARTS</span></h1>
-                <p class="text-sm text-gray-500 font-mono">MULTI-SYMBOL COMPARISON • LIVE DATA</p>
-            </div>
-            <div id="lastUpdated" class="text-xs font-mono text-gray-500 px-4 py-1 bg-white/5 rounded-3xl"></div>
-        </div>
-
-        <!-- Symbol Selector -->
-        <div class="glass-panel p-6 rounded-3xl mb-6">
-            <div class="flex flex-wrap gap-2" id="symbolSelector">
-                <!-- Populated by JS -->
+                <div class="page-title">ADVANCED <em>CHARTS</em></div>
+                <div class="page-sub">TECHNICAL ANALYSIS • LIVE DATA</div>
             </div>
         </div>
+        <div class="live-badge" id="lastUpdated">LOADING...</div>
+    </div>
 
-        <!-- Main Chart -->
-        <div class="glass-panel p-6 rounded-3xl">
-            <div class="flex justify-between items-center mb-6">
-                <h2 id="chartTitle" class="font-semibold text-xl">BTCUSDT • 1h</h2>
-                <div class="flex gap-2" id="timeframeSelector">
-                    <!-- Timeframe buttons added by JS -->
+    <!-- Controls -->
+    <div class="panel controls-bar">
+        <div class="ctrl-group" id="symbolSelector"></div>
+        <div class="ctrl-divider"></div>
+        <div class="ctrl-group right" id="timeframeSelector"></div>
+    </div>
+
+    <!-- Main Chart -->
+    <div class="panel chart-wrap" style="margin-bottom:16px;">
+        <div class="chart-header">
+            <div>
+                <div class="chart-title" id="chartTitle">BTCUSDT • 1h</div>
+                <div style="display:flex;align-items:baseline;gap:6px;margin-top:4px;">
+                    <div class="chart-price" id="currentPrice">—</div>
+                    <div id="priceChange" style="font-size:12px;"></div>
                 </div>
             </div>
-            <div id="mainChart" style="height: 520px;" class="w-full"></div>
+            <div class="ind-btns">
+                <button onclick="app.toggleIndicator('ema')" id="btn-ema" class="ind-btn active">EMA 9/21</button>
+                <button onclick="app.toggleIndicator('sma')" id="btn-sma" class="ind-btn active">SMA 50</button>
+                <button onclick="app.toggleIndicator('rsi')" id="btn-rsi" class="ind-btn active">RSI 14</button>
+                <button onclick="app.toggleIndicator('macd')" id="btn-macd" class="ind-btn active">MACD</button>
+            </div>
         </div>
+        <div id="mainChart" style="height:420px;width:100%;"></div>
+    </div>
 
-        <!-- Status -->
-        <div class="mt-6 text-center text-xs text-gray-500 font-mono" id="chartStatus">
-            Loading chart data...
+    <!-- Sub Charts -->
+    <div class="sub-charts">
+        <div class="panel sub-chart-wrap" id="rsiPane">
+            <div class="sub-chart-title">RSI (14)</div>
+            <div class="rsi-meta">
+                <span><span class="dot" style="background:#ef4444;"></span>OVERBOUGHT 70</span>
+                <span><span class="dot" style="background:#22d3ee;"></span>OVERSOLD 30</span>
+                <span id="rsiValue" style="margin-left:auto;color:#a1a1aa;"></span>
+            </div>
+            <div id="rsiChart" style="height:160px;width:100%;"></div>
         </div>
-    </main>
+        <div class="panel sub-chart-wrap" id="macdPane">
+            <div class="sub-chart-title">MACD (12, 26, 9)</div>
+            <div class="rsi-meta">
+                <span><span class="dot" style="background:#22d3ee;"></span>MACD</span>
+                <span><span class="dot" style="background:#f472b6;"></span>SIGNAL</span>
+                <span id="macdValue" style="margin-left:auto;color:#a1a1aa;"></span>
+            </div>
+            <div id="macdChart" style="height:160px;width:100%;"></div>
+        </div>
+    </div>
+</main>
 
-    <div id="toastContainer" class="toast-container"></div>
+<div id="toastArea"></div>
 
-    <script>
-        const app = {
-            chart: null,
-            candleSeries: null,
-            currentSymbol: 'BTCUSDT',
-            currentTF: '1h',
-            symbols: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT', 'TONUSDT', 'ADAUSDT'],
-            timeframes: ['15m', '1h', '4h', '1d'],
-            klineWs: null,
-            isDark: true,
+<script>
+const app = {
+    // Chart instances
+    mainChart: null, mainSeries: null,
+    ema9Series: null, ema21Series: null, sma50Series: null,
+    rsiChart: null, rsiSeries: null,
+    macdChart: null, macdLine: null, signalLine: null, histogramSeries: null,
 
-            safeLocalStorage: {
-                getItem: (key) => { try { return localStorage.getItem(key); } catch(e) { return null; }},
-                setItem: (key, value) => { try { localStorage.setItem(key, value); return true; } catch(e) { return false; }}
-            },
+    // State
+    currentSymbol: 'BTCUSDT',
+    currentTF: '1h',
+    symbols: ['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','DOGEUSDT','ADAUSDT','AVAXUSDT'],
+    timeframes: ['15m','1h','4h','1d'],
+    showEMA: true, showSMA: true, showRSI: true, showMACD: true,
+    klineWs: null,
+    isDark: true,
+    sidebarOpen: false,
+    candles: [],
 
-            init: () => {
-                app.loadTheme();
-                app.initChart();
-                app.renderSymbolSelector();
-                app.renderTimeframeSelector();
-                app.loadChart(app.currentSymbol, app.currentTF);
-                app.updateSidebarTime();
-                setInterval(app.updateSidebarTime, 30000);
-            },
+    ls: {
+        get: k => { try { return localStorage.getItem(k); } catch { return null; } },
+        set: (k,v) => { try { localStorage.setItem(k,v); } catch {} }
+    },
 
-            initChart: () => {
-                const el = document.getElementById('mainChart');
-                app.chart = LightweightCharts.createChart(el, {
-                    layout: { background: { color: 'transparent' }, textColor: '#71717a' },
-                    grid: { 
-                        vertLines: { color: 'rgba(255,255,255,0.04)' }, 
-                        horzLines: { color: 'rgba(255,255,255,0.04)' } 
-                    },
-                    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-                    rightPriceScale: { borderColor: 'rgba(255,255,255,0.1)' },
-                    timeScale: { borderColor: 'rgba(255,255,255,0.1)', timeVisible: true }
-                });
-                app.candleSeries = app.chart.addCandlestickSeries({
-                    upColor: '#34d399',
-                    downColor: '#f87171',
-                    borderUpColor: '#34d399',
-                    borderDownColor: '#f87171',
-                    wickUpColor: '#34d399',
-                    wickDownColor: '#f87171'
-                });
-            },
+    // ── Init ──────────────────────────────────────────────
+    init() {
+        app.loadTheme();
+        app.initCharts();
+        app.renderSymbolSelector();
+        app.renderTimeframeSelector();
+        app.loadChartData(app.currentSymbol, app.currentTF);
+        app.updateSidebarTime();
+        setInterval(app.updateSidebarTime, 30000);
 
-            renderSymbolSelector: () => {
-                const container = document.getElementById('symbolSelector');
-                container.innerHTML = app.symbols.map(sym => {
-                    const clean = sym.replace('USDT', '');
-                    return `
-                        <button onclick="app.switchSymbol('${sym}')" 
-                                data-symbol="${sym}"
-                                class="symbol-btn px-5 py-2 text-sm font-mono border border-white/10 rounded-2xl hover:border-emerald-500 transition-all ${sym === app.currentSymbol ? 'active' : ''}">
-                            ${clean}
-                        </button>
-                    `;
-                }).join('');
-            },
-
-            renderTimeframeSelector: () => {
-                const container = document.getElementById('timeframeSelector');
-                container.innerHTML = app.timeframes.map(tf => `
-                    <button onclick="app.switchTimeframe('${tf}')" 
-                            class="px-4 py-1.5 text-xs font-mono rounded-xl transition-all ${tf === app.currentTF ? 'tab-active' : 'hover:bg-white/10'}">
-                        ${tf}
-                    </button>
-                `).join('');
-            },
-
-            switchSymbol: (symbol) => {
-                app.currentSymbol = symbol;
-                document.querySelectorAll('#symbolSelector button').forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.symbol === symbol);
-                });
-                document.getElementById('chartTitle').textContent = `${symbol} • ${app.currentTF}`;
-                app.loadChart(symbol, app.currentTF);
-            },
-
-            switchTimeframe: (tf) => {
-                app.currentTF = tf;
-                document.querySelectorAll('#timeframeSelector button').forEach(btn => {
-                    btn.classList.toggle('tab-active', btn.textContent === tf);
-                });
-                document.getElementById('chartTitle').textContent = `${app.currentSymbol} • ${tf}`;
-                app.loadChart(app.currentSymbol, tf);
-            },
-
-            loadChart: async (symbol, interval) => {
-                document.getElementById('chartStatus').textContent = `Loading ${symbol} ${interval} chart...`;
-
-                try {
-                    // Close previous WebSocket if exists
-                    if (app.klineWs) app.klineWs.close();
-
-                    const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=300`);
-                    const data = await res.json();
-
-                    const candles = data.map(d => ({
-                        time: Math.floor(d[0] / 1000),
-                        open: parseFloat(d[1]),
-                        high: parseFloat(d[2]),
-                        low: parseFloat(d[3]),
-                        close: parseFloat(d[4])
-                    }));
-
-                    app.candleSeries.setData(candles);
-                    app.chart.timeScale().fitContent();
-
-                    // Start real-time kline WebSocket
-                    app.startKlineWebSocket(symbol, interval);
-
-                    document.getElementById('chartStatus').textContent = `Live • ${symbol} ${interval}`;
-                } catch (e) {
-                    console.error(e);
-                    document.getElementById('chartStatus').textContent = "Failed to load chart data";
-                }
-            },
-
-            startKlineWebSocket: (symbol, interval) => {
-                const stream = `${symbol.toLowerCase()}@kline_${interval}`;
-                app.klineWs = new WebSocket(`wss://stream.binance.com:9443/ws/${stream}`);
-
-                app.klineWs.onmessage = (event) => {
-                    const msg = JSON.parse(event.data);
-                    const k = msg.k;
-                    const candle = {
-                        time: Math.floor(k.t / 1000),
-                        open: parseFloat(k.o),
-                        high: parseFloat(k.h),
-                        low: parseFloat(k.l),
-                        close: parseFloat(k.c)
-                    };
-                    app.candleSeries.update(candle);
-                };
-
-                app.klineWs.onerror = () => console.warn("Kline WS error");
-                app.klineWs.onclose = () => console.log("Kline WS closed");
-            },
-
-            updateSidebarTime: () => {
-                document.getElementById('sidebarTime').textContent = new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
-            },
-
-            toggleTheme: () => {
-                app.isDark = !app.isDark;
-                document.body.classList.toggle('light', !app.isDark);
-                document.getElementById('themeIcon').textContent = app.isDark ? '🌙' : '☀️';
-                document.getElementById('themeText').textContent = app.isDark ? 'Dark Mode' : 'Light Mode';
-                app.safeLocalStorage.setItem('theme', app.isDark ? 'dark' : 'light');
-            },
-
-            loadTheme: () => {
-                const saved = app.safeLocalStorage.getItem('theme');
-                if (saved === 'light') {
-                    app.isDark = false;
-                    document.body.classList.add('light');
-                    document.getElementById('themeIcon').textContent = '☀️';
-                    document.getElementById('themeText').textContent = 'Light Mode';
-                }
+        // Close sidebar when clicking outside
+        document.addEventListener('click', e => {
+            const sidebar = document.getElementById('sidebar');
+            const menuBtn = document.querySelector('.menu-btn');
+            if (app.sidebarOpen && !sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
+                app.sidebarOpen = false;
+                sidebar.classList.remove('open');
             }
-        };
+        });
+    },
 
-        document.addEventListener('DOMContentLoaded', app.init);
-    </script>
+    // ── Charts init ───────────────────────────────────────
+    initCharts() {
+        const chartOpts = (height) => ({
+            layout: { background: { color: 'transparent' }, textColor: '#52525b' },
+            grid: {
+                vertLines: { color: 'rgba(255,255,255,0.03)' },
+                horzLines: { color: 'rgba(255,255,255,0.03)' }
+            },
+            crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+            rightPriceScale: { borderColor: 'rgba(255,255,255,0.07)', scaleMargins: { top: 0.08, bottom: 0.08 } },
+            timeScale: { borderColor: 'rgba(255,255,255,0.07)', timeVisible: true }
+        });
+
+        // Main chart
+        app.mainChart = LightweightCharts.createChart(document.getElementById('mainChart'), chartOpts());
+        app.mainSeries = app.mainChart.addCandlestickSeries({
+            upColor: '#34d399', downColor: '#f87171',
+            wickUpColor: '#34d399', wickDownColor: '#f87171',
+            borderVisible: false
+        });
+        app.ema9Series  = app.mainChart.addLineSeries({ color: '#22d3ee', lineWidth: 1.5, title: 'EMA9'  });
+        app.ema21Series = app.mainChart.addLineSeries({ color: '#a78bfa', lineWidth: 1.5, title: 'EMA21' });
+        app.sma50Series = app.mainChart.addLineSeries({ color: '#fbbf24', lineWidth: 1.5, title: 'SMA50' });
+
+        // Crosshair price display
+        app.mainChart.subscribeCrosshairMove(param => {
+            if (!param.seriesData) return;
+            const candle = param.seriesData.get(app.mainSeries);
+            if (candle) app.updatePriceDisplay(candle.close, null);
+        });
+
+        // RSI chart
+        app.rsiChart = LightweightCharts.createChart(document.getElementById('rsiChart'), {
+            ...chartOpts(),
+            rightPriceScale: { borderColor: 'rgba(255,255,255,0.07)', scaleMargins: { top: 0.1, bottom: 0.1 } }
+        });
+        app.rsiSeries = app.rsiChart.addLineSeries({ color: '#eab308', lineWidth: 1.5 });
+
+        // MACD chart
+        app.macdChart = LightweightCharts.createChart(document.getElementById('macdChart'), chartOpts());
+        app.macdLine      = app.macdChart.addLineSeries({ color: '#22d3ee', lineWidth: 1.5 });
+        app.signalLine    = app.macdChart.addLineSeries({ color: '#f472b6', lineWidth: 1.5 });
+        app.histogramSeries = app.macdChart.addHistogramSeries({ priceFormat: { type: 'volume' } });
+
+        // Sync time scales
+        app.mainChart.timeScale().subscribeVisibleLogicalRangeChange(range => {
+            if (range) {
+                app.rsiChart.timeScale().setVisibleLogicalRange(range);
+                app.macdChart.timeScale().setVisibleLogicalRange(range);
+            }
+        });
+    },
+
+    // ── Symbol & Timeframe selectors ──────────────────────
+    renderSymbolSelector() {
+        document.getElementById('symbolSelector').innerHTML = app.symbols.map(sym => {
+            const label = sym.replace('USDT','');
+            return `<button onclick="app.switchSymbol('${sym}')" data-sym="${sym}"
+                    class="sym-btn ${sym === app.currentSymbol ? 'active' : ''}">${label}</button>`;
+        }).join('');
+    },
+
+    renderTimeframeSelector() {
+        document.getElementById('timeframeSelector').innerHTML = app.timeframes.map(tf =>
+            `<button onclick="app.switchTimeframe('${tf}')" data-tf="${tf}"
+             class="tf-btn ${tf === app.currentTF ? 'active' : ''}">${tf}</button>`
+        ).join('');
+    },
+
+    switchSymbol(sym) {
+        app.currentSymbol = sym;
+        document.querySelectorAll('#symbolSelector .sym-btn').forEach(b =>
+            b.classList.toggle('active', b.dataset.sym === sym));
+        app.updateChartTitle();
+        app.loadChartData(sym, app.currentTF);
+    },
+
+    switchTimeframe(tf) {
+        app.currentTF = tf;
+        document.querySelectorAll('#timeframeSelector .tf-btn').forEach(b =>
+            b.classList.toggle('active', b.dataset.tf === tf));
+        app.updateChartTitle();
+        app.loadChartData(app.currentSymbol, tf);
+    },
+
+    updateChartTitle() {
+        document.getElementById('chartTitle').textContent = `${app.currentSymbol} • ${app.currentTF}`;
+    },
+
+    // ── Data loading ──────────────────────────────────────
+    async loadChartData(symbol, interval) {
+        if (app.klineWs) { app.klineWs.close(); app.klineWs = null; }
+
+        try {
+            const res  = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=500`);
+            const raw  = await res.json();
+
+            if (!Array.isArray(raw)) throw new Error('Bad response');
+
+            app.candles = raw.map(d => ({
+                time:  Math.floor(d[0] / 1000),
+                open:  parseFloat(d[1]),
+                high:  parseFloat(d[2]),
+                low:   parseFloat(d[3]),
+                close: parseFloat(d[4])
+            }));
+
+            app.mainSeries.setData(app.candles);
+
+            const closes = app.candles.map(c => c.close);
+            app.plotEMAs(closes, app.candles);
+            app.plotSMA(closes, app.candles);
+            app.plotRSI(closes, app.candles);
+            app.plotMACD(closes, app.candles);
+
+            app.mainChart.timeScale().fitContent();
+            app.rsiChart.timeScale().fitContent();
+            app.macdChart.timeScale().fitContent();
+
+            const last = app.candles[app.candles.length - 1];
+            const prev = app.candles[app.candles.length - 2];
+            app.updatePriceDisplay(last.close, prev?.close);
+
+            document.getElementById('lastUpdated').textContent = `UPDATED ${new Date().toLocaleTimeString()}`;
+
+            app.startWS(symbol, interval);
+        } catch(e) {
+            console.error('loadChartData:', e);
+            document.getElementById('lastUpdated').textContent = 'ERROR — RETRYING';
+            setTimeout(() => app.loadChartData(symbol, interval), 3000);
+        }
+    },
+
+    // ── Indicator plots ───────────────────────────────────
+    plotEMAs(closes, candles) {
+        const empty = [];
+        if (!app.showEMA) {
+            app.ema9Series.setData(empty);
+            app.ema21Series.setData(empty);
+            return;
+        }
+        const ema9  = app.calcEMA(closes, 9);
+        const ema21 = app.calcEMA(closes, 21);
+        app.ema9Series.setData( candles.map((c,i) => ({ time: c.time, value: ema9[i]  })));
+        app.ema21Series.setData(candles.map((c,i) => ({ time: c.time, value: ema21[i] })));
+    },
+
+    plotSMA(closes, candles) {
+        if (!app.showSMA) { app.sma50Series.setData([]); return; }
+        const sma = app.calcSMA(closes, 50);
+        // SMA starts at index 49 — align with candles correctly
+        app.sma50Series.setData(
+            candles.slice(49).map((c,i) => ({ time: c.time, value: sma[i] }))
+        );
+    },
+
+    plotRSI(closes, candles) {
+        if (!app.showRSI) { app.rsiSeries.setData([]); return; }
+        const { rsi } = app.calcRSI(closes, 14);
+        // RSI starts at index 14 — align timestamps from candles
+        const offset = closes.length - rsi.length;
+        app.rsiSeries.setData(rsi.map((v,i) => ({ time: candles[offset + i].time, value: v })));
+
+        const lastRSI = rsi[rsi.length - 1];
+        if (lastRSI !== undefined) {
+            const col = lastRSI > 70 ? '#ef4444' : lastRSI < 30 ? '#22d3ee' : '#eab308';
+            document.getElementById('rsiValue').textContent = `RSI: ${lastRSI.toFixed(1)}`;
+            document.getElementById('rsiValue').style.color = col;
+        }
+    },
+
+    plotMACD(closes, candles) {
+        if (!app.showMACD) {
+            app.macdLine.setData([]);
+            app.signalLine.setData([]);
+            app.histogramSeries.setData([]);
+            return;
+        }
+        const { macd, signal, histogram, offset } = app.calcMACD(closes);
+        const ts = candles.slice(offset).map(c => c.time);
+        const minLen = Math.min(ts.length, macd.length, signal.length, histogram.length);
+
+        app.macdLine.setData(      ts.slice(0, minLen).map((t,i) => ({ time: t, value: macd[i]      })));
+        app.signalLine.setData(    ts.slice(0, minLen).map((t,i) => ({ time: t, value: signal[i]    })));
+        app.histogramSeries.setData(ts.slice(0, minLen).map((t,i) => ({
+            time: t, value: histogram[i],
+            color: histogram[i] >= 0 ? '#34d399' : '#f87171'
+        })));
+
+        const lastH = histogram[minLen - 1];
+        const lastM = macd[minLen - 1];
+        if (lastM !== undefined) {
+            document.getElementById('macdValue').textContent = `MACD: ${lastM.toFixed(4)}`;
+        }
+    },
+
+    // ── Math ──────────────────────────────────────────────
+    calcEMA(data, period) {
+        const k = 2 / (period + 1);
+        let ema = new Array(data.length);
+        ema[0] = data[0];
+        for (let i = 1; i < data.length; i++)
+            ema[i] = data[i] * k + ema[i-1] * (1 - k);
+        return ema;
+    },
+
+    calcSMA(data, period) {
+        const result = [];
+        for (let i = period - 1; i < data.length; i++) {
+            let sum = 0;
+            for (let j = i - period + 1; j <= i; j++) sum += data[j];
+            result.push(sum / period);
+        }
+        return result;
+    },
+
+    calcRSI(closes, period = 14) {
+        let gains = 0, losses = 0;
+        for (let i = 1; i <= period; i++) {
+            const d = closes[i] - closes[i-1];
+            d > 0 ? gains += d : losses -= d;
+        }
+        let avgGain = gains / period;
+        let avgLoss = losses / period;
+        const rsi = [];
+
+        for (let i = period + 1; i < closes.length; i++) {
+            const d = closes[i] - closes[i-1];
+            avgGain = (avgGain * (period - 1) + (d > 0 ? d : 0)) / period;
+            avgLoss = (avgLoss * (period - 1) + (d < 0 ? -d : 0)) / period;
+            const rs = avgLoss === 0 ? Infinity : avgGain / avgLoss;
+            rsi.push(100 - 100 / (1 + rs));
+        }
+        return { rsi, offset: period + 1 };
+    },
+
+    calcMACD(closes, fast=12, slow=26, sig=9) {
+        const emaFast = app.calcEMA(closes, fast);
+        const emaSlow = app.calcEMA(closes, slow);
+        const macdLine = emaFast.map((v,i) => v - emaSlow[i]);
+        const signalLine = app.calcEMA(macdLine, sig);
+        const histogram = macdLine.map((v,i) => v - signalLine[i]);
+        return { macd: macdLine, signal: signalLine, histogram, offset: 0 };
+    },
+
+    // ── WebSocket real-time ───────────────────────────────
+    startWS(symbol, interval) {
+        const stream = `${symbol.toLowerCase()}@kline_${interval}`;
+        app.klineWs = new WebSocket(`wss://stream.binance.com:9443/ws/${stream}`);
+
+        app.klineWs.onopen = () => {
+            document.getElementById('wsStatus').textContent = 'LIVE';
+        };
+        app.klineWs.onclose = () => {
+            document.getElementById('wsStatus').textContent = 'RECONNECTING';
+        };
+        app.klineWs.onmessage = e => {
+            const { k } = JSON.parse(e.data);
+            const candle = {
+                time:  Math.floor(k.t / 1000),
+                open:  parseFloat(k.o),
+                high:  parseFloat(k.h),
+                low:   parseFloat(k.l),
+                close: parseFloat(k.c)
+            };
+            app.mainSeries.update(candle);
+
+            // Update last candle or push new one
+            const last = app.candles[app.candles.length - 1];
+            if (last && last.time === candle.time) {
+                app.candles[app.candles.length - 1] = candle;
+            } else if (k.x) { // candle closed — add new
+                app.candles.push(candle);
+            }
+
+            app.updatePriceDisplay(candle.close, last?.close);
+            document.getElementById('lastUpdated').textContent = `LIVE • ${new Date().toLocaleTimeString()}`;
+        };
+        app.klineWs.onerror = () => app.klineWs.close();
+    },
+
+    // ── UI helpers ────────────────────────────────────────
+    updatePriceDisplay(price, prevPrice) {
+        const el = document.getElementById('currentPrice');
+        const chEl = document.getElementById('priceChange');
+        el.textContent = price >= 1000
+            ? price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : price.toFixed(4);
+
+        if (prevPrice) {
+            const pct = ((price - prevPrice) / prevPrice * 100).toFixed(2);
+            const up = price >= prevPrice;
+            chEl.textContent = `${up ? '+' : ''}${pct}%`;
+            chEl.style.color = up ? '#34d399' : '#f87171';
+        }
+    },
+
+    toggleIndicator(type) {
+        const map = { ema: 'showEMA', sma: 'showSMA', rsi: 'showRSI', macd: 'showMACD' };
+        app[map[type]] = !app[map[type]];
+        document.getElementById(`btn-${type}`).classList.toggle('active', app[map[type]]);
+
+        if (type === 'rsi')  document.getElementById('rsiPane').style.display  = app.showRSI  ? '' : 'none';
+        if (type === 'macd') document.getElementById('macdPane').style.display = app.showMACD ? '' : 'none';
+
+        const closes = app.candles.map(c => c.close);
+        if (type === 'ema')  app.plotEMAs(closes, app.candles);
+        if (type === 'sma')  app.plotSMA(closes, app.candles);
+        if (type === 'rsi')  app.plotRSI(closes, app.candles);
+        if (type === 'macd') app.plotMACD(closes, app.candles);
+    },
+
+    toggleSidebar() {
+        app.sidebarOpen = !app.sidebarOpen;
+        document.getElementById('sidebar').classList.toggle('open', app.sidebarOpen);
+    },
+
+    updateSidebarTime() {
+        document.getElementById('sidebarTime').textContent =
+            new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+    },
+
+    toggleTheme() {
+        app.isDark = !app.isDark;
+        document.body.style.background = app.isDark ? '' : '#f4f4f5';
+        document.getElementById('themeIcon').textContent = app.isDark ? '🌙' : '☀️';
+        document.getElementById('themeText').textContent = app.isDark ? 'Dark Mode' : 'Light Mode';
+        app.ls.set('theme', app.isDark ? 'dark' : 'light');
+    },
+
+    loadTheme() {
+        const saved = app.ls.get('theme');
+        if (saved === 'light') {
+            app.isDark = false;
+            document.body.style.background = '#f4f4f5';
+            document.getElementById('themeIcon').textContent = '☀️';
+            document.getElementById('themeText').textContent = 'Light Mode';
+        }
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => app.init());
+</script>
 </body>
 </html>
+
